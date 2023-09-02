@@ -35,18 +35,22 @@ let
 
 in stdenv.mkDerivation rec {
   pname = "nwjs";
-  version = "0.54.1";
+  version = "0.79.1";
 
-  src = if sdk then fetchurl {
+  # src = if sdk then fetchurl {
+  #   url = "https://dl.nwjs.io/v${version}/nwjs-sdk-v${version}-linux-${bits}.tar.gz";
+  #   sha256 = if bits == "x64" then
+  #     "sha256-1qeU4+EIki0M7yJPkRuzFwMdswfDOni5gltdmM6A/ds=" else
+  #     "sha256-wDEGePE9lrKa6OAzeiDLhVj992c0TJgiMHb8lJ4PF80=";
+  # } else fetchurl {
+  #   url = "https://dl.nwjs.io/v${version}/nwjs-v${version}-linux-${bits}.tar.gz";
+  #   sha256 = if bits == "x64" then
+  #     "sha256-TACEM06K2t6dDXRD44lSW7GRi77yzSW4BZJw8gT+fl4=" else
+  #     "sha256-yX9knqFV5VQTT3TJDmQoDgt17NqH8fLt+bLQAqKleTU=";
+  # };
+  src = fetchurl {
     url = "https://dl.nwjs.io/v${version}/nwjs-sdk-v${version}-linux-${bits}.tar.gz";
-    sha256 = if bits == "x64" then
-      "sha256-1qeU4+EIki0M7yJPkRuzFwMdswfDOni5gltdmM6A/ds=" else
-      "sha256-wDEGePE9lrKa6OAzeiDLhVj992c0TJgiMHb8lJ4PF80=";
-  } else fetchurl {
-    url = "https://dl.nwjs.io/v${version}/nwjs-v${version}-linux-${bits}.tar.gz";
-    sha256 = if bits == "x64" then
-      "sha256-TACEM06K2t6dDXRD44lSW7GRi77yzSW4BZJw8gT+fl4=" else
-      "sha256-yX9knqFV5VQTT3TJDmQoDgt17NqH8fLt+bLQAqKleTU=";
+    sha256 = "sha256-+08sHFgFPK2a3RoQWNFLi4ySQx4WXpvVLGXG7gdlxPo=";
   };
 
   # we have runtime deps like sqlite3 that should remain
@@ -60,6 +64,11 @@ in stdenv.mkDerivation rec {
       find $out/share/nwjs
 
       patchelf --set-interpreter "$(cat $NIX_CC/nix-support/dynamic-linker)" $out/share/nwjs/nw
+      patchelf --set-interpreter "$(cat $NIX_CC/nix-support/dynamic-linker)" $out/share/nwjs/nwjc
+      patchelf --set-interpreter "$(cat $NIX_CC/nix-support/dynamic-linker)" $out/share/nwjs/chromedriver
+      patchelf --set-interpreter "$(cat $NIX_CC/nix-support/dynamic-linker)" $out/share/nwjs/chrome_crashpad_handler
+      patchelf --set-interpreter "$(cat $NIX_CC/nix-support/dynamic-linker)" $out/share/nwjs/nacl_helper
+      patchelf --set-interpreter "$(cat $NIX_CC/nix-support/dynamic-linker)" $out/share/nwjs/minidump_stackwalk
 
       ln -s ${lib.getLib systemd}/lib/libudev.so $out/share/nwjs/libudev.so.0
 
@@ -68,9 +77,14 @@ in stdenv.mkDerivation rec {
         patchelf --set-rpath "${nwEnv}/lib:${ccPath}:$libpath" "$f"
       done
       patchelf --set-rpath "${nwEnv}/lib:${nwEnv}/lib64:${ccPath}:$libpath" $out/share/nwjs/nw
+      patchelf --set-rpath "${nwEnv}/lib:${nwEnv}/lib64:${ccPath}:$libpath" $out/share/nwjs/nwjc
+      patchelf --set-rpath "${nwEnv}/lib:${nwEnv}/lib64:${ccPath}:$libpath" $out/share/nwjs/chromedriver
+      patchelf --set-rpath "${nwEnv}/lib:${nwEnv}/lib64:${ccPath}:$libpath" $out/share/nwjs/chrome_crashpad_handler
+      patchelf --set-rpath "${nwEnv}/lib:${nwEnv}/lib64:${ccPath}:$libpath" $out/share/nwjs/nacl_helper
+      patchelf --set-rpath "${nwEnv}/lib:${nwEnv}/lib64:${ccPath}:$libpath" $out/share/nwjs/minidump_stackwalk
       # check, whether all RPATHs are correct (all dependencies found)
       checkfile=$(mktemp)
-      for f in "$libpath"/*.so "$out/share/nwjs/nw"; do
+      for f in "$libpath"/*.so "$out/share/nwjs/nw" "$out/share/nwjs/nwjc" "$out/share/nwjs/chromedriver" "$out/share/nwjs/chrome_crashpad_handler" "$out/share/nwjs/nacl_helper" "$out/share/nwjs/minidump_stackwalk"; do
          (echo "$f:";
           ldd "$f"  ) > "$checkfile"
       done
