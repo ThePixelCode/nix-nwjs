@@ -59,28 +59,15 @@ in stdenv.mkDerivation rec {
       cp -R * $out/share/nwjs
       find $out/share/nwjs
 
-      patchelf --set-interpreter "$(cat $NIX_CC/nix-support/dynamic-linker)" $out/share/nwjs/nw
-      patchelf --set-interpreter "$(cat $NIX_CC/nix-support/dynamic-linker)" $out/share/nwjs/nwjc
-      patchelf --set-interpreter "$(cat $NIX_CC/nix-support/dynamic-linker)" $out/share/nwjs/chromedriver
-      patchelf --set-interpreter "$(cat $NIX_CC/nix-support/dynamic-linker)" $out/share/nwjs/chrome_crashpad_handler
-      patchelf --set-interpreter "$(cat $NIX_CC/nix-support/dynamic-linker)" $out/share/nwjs/nacl_helper
-      patchelf --set-interpreter "$(cat $NIX_CC/nix-support/dynamic-linker)" $out/share/nwjs/minidump_stackwalk
+      patchelf --set-interpreter "$(cat $NIX_CC/nix-support/dynamic-linker)" $(find $out/share/nwjs -type f -exec file {} \; | grep ELF | grep -i interpreter | cut -d: -f1 | xargs)
 
       ln -s ${lib.getLib systemd}/lib/libudev.so $out/share/nwjs/libudev.so.0
 
       libpath="$out/share/nwjs/lib/"
-      for f in "$libpath"/*.so; do
-        patchelf --set-rpath "${nwEnv}/lib:${ccPath}:$libpath" "$f"
-      done
-      patchelf --set-rpath "${nwEnv}/lib:${nwEnv}/lib64:${ccPath}:$libpath" $out/share/nwjs/nw
-      patchelf --set-rpath "${nwEnv}/lib:${nwEnv}/lib64:${ccPath}:$libpath" $out/share/nwjs/nwjc
-      patchelf --set-rpath "${nwEnv}/lib:${nwEnv}/lib64:${ccPath}:$libpath" $out/share/nwjs/chromedriver
-      patchelf --set-rpath "${nwEnv}/lib:${nwEnv}/lib64:${ccPath}:$libpath" $out/share/nwjs/chrome_crashpad_handler
-      patchelf --set-rpath "${nwEnv}/lib:${nwEnv}/lib64:${ccPath}:$libpath" $out/share/nwjs/nacl_helper
-      patchelf --set-rpath "${nwEnv}/lib:${nwEnv}/lib64:${ccPath}:$libpath" $out/share/nwjs/minidump_stackwalk
+      patchelf --set-rpath "${nwEnv}/lib:${nwEnv}/lib64:${ccPath}:$libpath" $(find $out/share/nwjs -type f -exec file {} \; | grep ELF | cut -d: -f1 | xargs)
       # check, whether all RPATHs are correct (all dependencies found)
       checkfile=$(mktemp)
-      for f in "$libpath"/*.so "$out/share/nwjs/nw" "$out/share/nwjs/nwjc" "$out/share/nwjs/chromedriver" "$out/share/nwjs/chrome_crashpad_handler" "$out/share/nwjs/nacl_helper" "$out/share/nwjs/minidump_stackwalk"; do
+      for f in $(find $out/share/nwjs -type f -exec file {} \; | grep ELF | cut -d: -f1 | xargs); do
          (echo "$f:";
           ldd "$f"  ) > "$checkfile"
       done
