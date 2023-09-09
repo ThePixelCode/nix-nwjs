@@ -59,15 +59,15 @@ in stdenv.mkDerivation rec {
       cp -R * $out/share/nwjs
       find $out/share/nwjs
 
-      patchelf --set-interpreter "$(cat $NIX_CC/nix-support/dynamic-linker)" $(find $out/share/nwjs -type f -exec file {} \; | grep ELF | grep -i interpreter | cut -d: -f1 | xargs)
+      patchelf --set-interpreter "$(cat $NIX_CC/nix-support/dynamic-linker)" $(find $out/share/nwjs -type f -exec file {} \; | grep ELF | grep -i interpreter | cut -d: -f1)
 
       ln -s ${lib.getLib systemd}/lib/libudev.so $out/share/nwjs/libudev.so.0
 
       libpath="$out/share/nwjs/lib/"
-      patchelf --set-rpath "${nwEnv}/lib:${nwEnv}/lib64:${ccPath}:$libpath" $(find $out/share/nwjs -type f -exec file {} \; | grep ELF | cut -d: -f1 | xargs)
+      patchelf --set-rpath "${nwEnv}/lib:${nwEnv}/lib64:${ccPath}:$libpath" $(find $out/share/nwjs -type f -exec file {} \; | grep ELF | grep -v statically | grep -v "LSB relocatable" | cut -d: -f1)
       # check, whether all RPATHs are correct (all dependencies found)
       checkfile=$(mktemp)
-      for f in $(find $out/share/nwjs -type f -exec file {} \; | grep ELF | cut -d: -f1 | xargs); do
+      for f in $(find $out/share/nwjs -type f -exec file {} \; | grep ELF | grep -v statically | grep -v "LSB relocatable" | cut -d: -f1); do
          (echo "$f:";
           ldd "$f"  ) > "$checkfile"
       done
